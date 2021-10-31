@@ -1,11 +1,27 @@
+const glsl = function(...args) { 
+  let argArray = Object.values(arguments).slice(1, arguments.length); 
+  //console.log(argArray); 
+  var str = '';
+  for(let i = 0; i < argArray.length; ++i) {
+    str += arguments[0][i] + argArray[i];
+  }
+  str += arguments[0][argArray.length];
+  //console.log(str); 
+  return str; 
+};
+
 export default function(params) {
-  return `
+  return glsl`
   #version 100
   precision highp float;
 
   uniform sampler2D u_colmap;
   uniform sampler2D u_normap;
   uniform sampler2D u_lightbuffer;
+
+  uniform mat4 u_viewMatrix;
+  uniform vec3 u_specularColor;
+  uniform float u_shininess;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -72,7 +88,10 @@ export default function(params) {
   void main() {
     vec3 albedo = texture2D(u_colmap, v_uv).rgb;
     vec3 normap = texture2D(u_normap, v_uv).xyz;
-    vec3 normal = applyNormalMap(v_normal, normap);
+    vec3 normal = normalize(applyNormalMap(v_normal, normap));
+
+    vec3 viewPosition = (u_viewMatrix * vec4(v_position, 1.)).xyz;
+    vec3 viewNormal = (u_viewMatrix * vec4(normal, 0.)).xyz;
 
     vec3 fragColor = vec3(0.0);
 
@@ -85,6 +104,16 @@ export default function(params) {
       float lambertTerm = max(dot(L, normal), 0.0);
 
       fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+
+      vec3 viewLightPosition = (u_viewMatrix * vec4(light.position, 1.)).xyz;
+      vec3 viewL = (viewLightPosition - viewPosition) / lightDistance;
+
+      if(u_shininess > 0.) {
+        vec3 viewV = normalize(-viewPosition);
+        vec3 viewH = normalize(viewV + viewL);
+        float specularTerm = pow(max(dot(viewH, viewNormal), 0.0), u_shininess);
+        fragColor += u_specularColor * specularTerm * light.color * vec3(lightIntensity);
+      }
     }
 
     const vec3 ambientLight = vec3(0.025);

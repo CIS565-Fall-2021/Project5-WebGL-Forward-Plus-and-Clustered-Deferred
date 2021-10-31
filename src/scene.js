@@ -1,4 +1,6 @@
 const MinimalGLTFLoader = require('../lib/minimal-gltf-loader');
+import { vec3 } from 'gl-matrix';
+import { Color } from 'three';
 import { gl } from './init';
 
 // TODO: Edit if you want to change the light initial positions 
@@ -8,7 +10,7 @@ export const LIGHT_RADIUS = 5.0;
 export const LIGHT_DT = -0.03;
 
 // TODO: This controls the number of lights
-export const NUM_LIGHTS = 100;
+export const NUM_LIGHTS = 200;//25;//50;//100;//200;//400;
 
 class Scene {
   constructor() {
@@ -30,6 +32,14 @@ class Scene {
         radius: LIGHT_RADIUS,
       });
     }
+
+    this.specularColor = new Color(255, 255, 255);
+    this.shininess = 0;
+    this.pause = true;
+  }
+
+  getSpecularColor() {
+    return vec3.fromValues(this.specularColor.r / 255, this.specularColor.g / 255, this.specularColor.b / 255);
   }
 
   loadGLTF(url) {
@@ -156,6 +166,9 @@ class Scene {
   }
 
   update() {
+    if(this.pause) {
+      return;//TEST
+    }
     for (let i = 0; i < NUM_LIGHTS; i++) {
       // OPTIONAL TODO: Edit if you want to change how lights move
       this.lights[i].position[1] += LIGHT_DT;
