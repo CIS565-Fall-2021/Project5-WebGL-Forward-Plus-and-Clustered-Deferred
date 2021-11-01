@@ -1,16 +1,28 @@
-export default function(params) {
+export default function (params) {
   return `
   // TODO: This is pretty much just a clone of forward.frag.glsl.js
-
   #version 100
   precision highp float;
-
   uniform sampler2D u_colmap;
   uniform sampler2D u_normap;
   uniform sampler2D u_lightbuffer;
 
-  // TODO: Read this buffer to determine the lights influencing a cluster
   uniform sampler2D u_clusterbuffer;
+  uniform mat4 u_viewMatrix;
+
+  uniform float u_width;
+  uniform float u_height;
+  uniform float u_near;
+  uniform float u_far;
+
+  uniform float u_xSlices;
+  uniform float u_ySlices;
+  uniform float u_zSlices;
+
+  uniform int u_pixelsPerElement;
+  uniform int u_elementCount;
+
+  uniform vec3 u_camPos;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -53,12 +65,10 @@ export default function(params) {
     vec4 v1 = texture2D(u_lightbuffer, vec2(u, 0.3));
     vec4 v2 = texture2D(u_lightbuffer, vec2(u, 0.6));
     light.position = v1.xyz;
-
     // LOOK: This extracts the 4th float (radius) of the (index)th light in the buffer
     // Note that this is just an example implementation to extract one float.
     // There are more efficient ways if you need adjacent values
     light.radius = ExtractFloat(u_lightbuffer, ${params.numLights}, 2, index, 3);
-
     light.color = v2.rgb;
     return light;
   }
@@ -79,22 +89,45 @@ export default function(params) {
     vec3 normap = texture2D(u_normap, v_uv).xyz;
     vec3 normal = applyNormalMap(v_normal, normap);
 
+    // Convert position to camera space
+    vec4 cs = u_viewMatrix * vec4(v_position, 1.0);
+    cs.z *= -1.0;
+
+    // Determine the current cluster
+    int x = int(gl_FragCoord.x * u_xSlices / u_width);
+    int y = int(gl_FragCoord.y * u_ySlices / u_height);
+    int z = int((cs.z - u_near) * u_zSlices / (u_far - u_near));
+
+    // Compute 1D index
+    int index = x + (y * int(u_xSlices)) + (z * int(u_xSlices) * int(u_ySlices));
+
+    // Extract number of lights from texture buffer
+    int numLights = int(ExtractFloat(u_clusterbuffer, u_elementCount, u_pixelsPerElement, index, 0));
+    
     vec3 fragColor = vec3(0.0);
-
     for (int i = 0; i < ${params.numLights}; ++i) {
-      Light light = UnpackLight(i);
-      float lightDistance = distance(light.position, v_position);
-      vec3 L = (light.position - v_position) / lightDistance;
+      if (i < numLights) {
+        int lightIndex = int(ExtractFloat(u_clusterbuffer, u_elementCount, u_pixelsPerElement, index, i + 1));
+        Light light = UnpackLight(lightIndex);
+        float lightDistance = distance(light.position, v_position);
+        vec3 L = (light.position - v_position) / lightDistance;
+        float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
+        float lambertTerm = max(dot(L, normal), 0.0);
 
-      float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-      float lambertTerm = max(dot(L, normal), 0.0);
+        bool blinnPhong = false;
+        if (blinnPhong) {  //Blinn Phong adapted from CIS560 https://www.cis.upenn.edu/~cis460/21fa/index.html
+          vec3 viewDir = normalize(u_camPos - v_position);
+          vec3 lightDir = normalize(light.position - v_position);
+          vec3 halfDir = normalize(viewDir + lightDir);
+          float specIntensity = max(pow(dot(halfDir, normal), 10.0), 0.0);
+          fragColor += specIntensity * light.color * vec3(lightIntensity);
+        }
 
-      fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+        fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+      }
     }
-
     const vec3 ambientLight = vec3(0.025);
     fragColor += albedo * ambientLight;
-
     gl_FragColor = vec4(fragColor, 1.0);
   }
   `;
