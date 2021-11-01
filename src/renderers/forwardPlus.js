@@ -24,6 +24,7 @@ export default class ForwardPlusRenderer extends BaseRenderer {
     this._projectionMatrix = mat4.create();
     this._viewMatrix = mat4.create();
     this._viewProjectionMatrix = mat4.create();
+    this._inverseViewProjection = mat4.create();
   }
 
   render(camera, scene) {
@@ -32,9 +33,11 @@ export default class ForwardPlusRenderer extends BaseRenderer {
     mat4.invert(this._viewMatrix, camera.matrixWorld.elements);
     mat4.copy(this._projectionMatrix, camera.projectionMatrix.elements);
     mat4.multiply(this._viewProjectionMatrix, this._projectionMatrix, this._viewMatrix);
+    mat4.invert(this._inverseViewProjection, this._viewProjectionMatrix);
 
+    //console.table(this._viewMatrix);
     // Update cluster texture which maps from cluster index to light list
-    this.updateClusters(camera, this._viewMatrix, scene);
+    this.updateClusters(camera, this._viewMatrix, this._inverseViewProjection, scene);
     
     // Update the buffer used to populate the texture packed with light data
     for (let i = 0; i < NUM_LIGHTS; ++i) {

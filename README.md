@@ -3,26 +3,22 @@ WebGL Forward+ and Clustered Deferred Shading
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 5**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) **Google Chrome 222.2** on
-  Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Matt Elser
+* Tested on: **Google Chrome 95.0.4638** on 2019 MacBook Pro
 
-### Live Online
+[![](img/demo.gif)](https://mattelser.github.io/Project5-WebGL-Forward-Plus-and-Clustered-Deferred/index.html)
 
-[![](img/thumb.png)](http://TODO.github.io/Project5-WebGL-Forward-Plus-and-Clustered-Deferred)
+### What's implemented
+The cluster frustums are successfully created, as can be seen when turning wireframe on:
+![](img/frustum_side.png)
+![](img/frustum_lookthrough.png)
 
-### Demo Video/GIF
+lights are correctly associated to the intersection frustum(s), and stored in the light cluster texture.
 
-[![](img/video.png)](TODO)
-
-### (TODO: Your README)
-
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
-
-This assignment has a considerable amount of performance analysis compared
-to implementation work. Complete the implementation early to leave time!
-
+### Hypothetical performance comparison
+Based on what was shown in class, Forward+ should be significantly faster than forward shading for non-trivial numbers of lights. Forward+ can be made slower by larger light radii (a larger radius means lights will intersect more frustums, counteracting the optimization), but it should still generally be notably faster than forward. 
+Clustered shading would further optimize forward+, particularly for scenes with significant distances between objects in the foreground and background, by splitting the clusters up along the camera's z-axis. 
+Both of these algorithms trade a more complicated shading calculation for more efficient scene processing. 
 
 ### Credits
 
