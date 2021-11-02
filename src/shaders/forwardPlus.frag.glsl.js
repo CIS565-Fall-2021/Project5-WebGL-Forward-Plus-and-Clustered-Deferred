@@ -90,7 +90,7 @@ export default function(params) {
   void main() {
     vec3 albedo = texture2D(u_colmap, v_uv).rgb;
     vec3 normap = texture2D(u_normap, v_uv).xyz;
-    vec3 normal = applyNormalMap(v_normal, normap);
+    vec3 normal = normalize(applyNormalMap(v_normal, normap));
 
     vec3 fragColor = vec3(0.0);
     vec4 camSpacePos = u_viewMatrix * vec4(v_position, 1.0);

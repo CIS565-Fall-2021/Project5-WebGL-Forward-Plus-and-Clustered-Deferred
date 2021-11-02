@@ -80,8 +80,9 @@ export default function(params) {
 
 
     vec3 v_position = texture2D(u_gbuffers[0], v_uv).xyz;
-    vec3 albedo = texture2D(u_gbuffers[1], v_uv).rgb;
-    vec3 normal = texture2D(u_gbuffers[2], v_uv).xyz;
+    vec3 albedo = vec3(texture2D(u_gbuffers[0], v_uv).w, texture2D(u_gbuffers[1], v_uv).rg);
+    vec2 spherical = texture2D(u_gbuffers[1], v_uv).zw;
+    vec3 normal = normalize(vec3(sin(spherical.x) * cos(spherical.y), sin(spherical.x) * sin(spherical.y), cos(spherical.x)));
 
     vec3 fragColor = vec3(0.0);
     vec4 camSpacePos = u_viewMatrix * vec4(v_position, 1.0);
@@ -100,7 +101,11 @@ export default function(params) {
   
         float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
         float lambertTerm = max(dot(L, normal), 0.0);
-  
+
+        vec3 view = -camSpacePos.xyz;
+        vec3 halfVL = normalize(view + L);
+        float specular = pow(max(dot(halfVL, normal), 0.0), 30.0);
+        fragColor += light.color * lightIntensity * specular;
         fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
       }
 

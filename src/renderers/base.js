@@ -69,25 +69,10 @@ export default class BaseRenderer {
           const p2 = new Vector3(-width / 2 + (x+1) * dx, -height / 2 + y * dy, 1);
           const p3 = new Vector3(-width / 2 + (x+1) * dx, -height / 2 + (y+1) * dy, 1);
           const p4 = new Vector3(-width / 2 + x * dx, -height / 2 + (y+1) * dy, 1);
-          // console.log(camera.position)
-          // console.log(new Vector4(camera.position[0], camera.position[1], camera.position[2],1).applyMatrix4(viewMatrix))
-          // console.log(camera.position[0])
-          // console.log(camera.position.applyMatrix4(viewMatrix))
-          // console.log(viewMatrix)
-          // console.log(camera.position)
-          // const temp = new Vector3();
-          // camera.getWorldPosition(temp);
-          // console.log(temp);
-          
-          // console.log(viewMatrix);
-          // console.log(camera.position);
-          // console.log(new Vector3(0,0,0).applyMatrix4(camera.matrixWorld))
-          // console.log(camera.matrixWorld)
-          // debugger;
-          if (wireframeDisplay) {
-            let temp = new Vector3(p1.x, p1.y, -p1.z).multiplyScalar(10).applyMatrix4(camera.matrixWorld);
-            wireframe.addLineSegment([camera.position.x, camera.position.y, camera.position.z], [temp.x, temp.y, temp.z], [1,0,0])
-          }
+          // if (wireframeDisplay) {
+          //   let temp = new Vector3(p1.x, p1.y, -p1.z).multiplyScalar(10).applyMatrix4(camera.matrixWorld);
+          //   wireframe.addLineSegment([camera.position.x, camera.position.y, camera.position.z], [temp.x, temp.y, temp.z], [1,0,0])
+          // }
           
           //debugger;
           const plane2 = new Plane().setFromCoplanarPoints(origin, p1, p2);
@@ -106,12 +91,7 @@ export default class BaseRenderer {
                 this._clusterTexture.buffer[lightIndex] += 1;
                 let clusterLights = this._clusterTexture.buffer[lightIndex];
                 this._clusterTexture.buffer[this._clusterTexture.bufferIndex(i, Math.floor(clusterLights / 4)) + Math.floor(clusterLights % 4)] = index;
-                // console.log(clusterLights)
-                // console.log(i)
-                // debugger;
               }           
-              // console.log(this._clusterTexture.buffer[lightIndex])
-              // console.log(NUM_LIGHTS)
             } 
           }
         }
