@@ -4,33 +4,38 @@ import ForwardPlusRenderer from './renderers/forwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
 import Scene from './scene';
 import Wireframe from './wireframe';
+import ClusteredDeferredBlinnRenderer from './renderers/clusteredDeferredBlinn';
 
 const FORWARD = 'Forward';
 const FORWARD_PLUS = 'Forward+';
 const CLUSTERED = 'Clustered Deferred';
+const CLUSTERED_BLINN = 'Clustered Deferred Blinn';
 
 const params = {
-  renderer: FORWARD_PLUS,
-  _renderer: null,
+    renderer: CLUSTERED,
+    _renderer: null,
 };
 
 setRenderer(params.renderer);
 
 function setRenderer(renderer) {
-  switch(renderer) {
-    case FORWARD:
-      params._renderer = new ForwardRenderer();
-      break;
-    case FORWARD_PLUS:
-      params._renderer = new ForwardPlusRenderer(15, 15, 15);
-      break;
-    case CLUSTERED:
-      params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
-      break;
-  }
+    switch (renderer) {
+        case FORWARD:
+            params._renderer = new ForwardRenderer();
+            break;
+        case FORWARD_PLUS:
+            params._renderer = new ForwardPlusRenderer(20, 20, 20);
+            break;
+        case CLUSTERED:
+            params._renderer = new ClusteredDeferredRenderer(20, 20, 20);
+            break;
+        case CLUSTERED_BLINN:
+            params._renderer = new ClusteredDeferredBlinnRenderer(20, 20, 20);
+            break;
+    }
 }
 
-gui.add(params, 'renderer', [FORWARD, FORWARD_PLUS, CLUSTERED]).onChange(setRenderer);
+gui.add(params, 'renderer', [FORWARD, FORWARD_PLUS, CLUSTERED, CLUSTERED_BLINN]).onChange(setRenderer);
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
@@ -52,16 +57,16 @@ cameraControls.target.set(0, 2, 0);
 gl.enable(gl.DEPTH_TEST);
 
 function render() {
-  scene.update();  
-  params._renderer.render(camera, scene);
+    scene.update();
+    params._renderer.render(camera, scene);
 
-  // LOOK: Render wireframe "in front" of everything else.
-  // If you would like the wireframe to render behind and in front
-  // of objects based on relative depths in the scene, comment out /
-  //the gl.disable(gl.DEPTH_TEST) and gl.enable(gl.DEPTH_TEST) lines.
-  gl.disable(gl.DEPTH_TEST);
-  wireframe.render(camera);
-  gl.enable(gl.DEPTH_TEST);
+    // LOOK: Render wireframe "in front" of everything else.
+    // If you would like the wireframe to render behind and in front
+    // of objects based on relative depths in the scene, comment out /
+    //the gl.disable(gl.DEPTH_TEST) and gl.enable(gl.DEPTH_TEST) lines.
+    // gl.disable(gl.DEPTH_TEST);
+    // wireframe.render(camera);
+    // gl.enable(gl.DEPTH_TEST);
 }
 
 makeRenderLoop(render)();
