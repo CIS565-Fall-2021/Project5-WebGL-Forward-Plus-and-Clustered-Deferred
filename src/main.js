@@ -2,6 +2,7 @@ import { makeRenderLoop, camera, cameraControls, gui, gl } from './init';
 import ForwardRenderer from './renderers/forward';
 import ForwardPlusRenderer from './renderers/forwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
+import BloomRenderer from './renderers/bloom';
 import Scene from './scene';
 import Wireframe from './wireframe';
 
@@ -10,9 +11,13 @@ const FORWARD_PLUS = 'Forward+';
 const CLUSTERED = 'Clustered Deferred';
 
 const params = {
-  renderer: FORWARD_PLUS,
+  renderer: CLUSTERED,
   _renderer: null,
+  bloom: new BloomRenderer(),
 };
+
+const renderTarget = null;
+// const renderTarget = params.bloom._fbo;
 
 setRenderer(params.renderer);
 
@@ -53,15 +58,18 @@ gl.enable(gl.DEPTH_TEST);
 
 function render() {
   scene.update();  
-  params._renderer.render(camera, scene);
+  params._renderer.render(camera, scene, renderTarget);
+  if (renderTarget !== null) {
+    params.bloom.render();
+  }
 
   // LOOK: Render wireframe "in front" of everything else.
   // If you would like the wireframe to render behind and in front
   // of objects based on relative depths in the scene, comment out /
   //the gl.disable(gl.DEPTH_TEST) and gl.enable(gl.DEPTH_TEST) lines.
-  gl.disable(gl.DEPTH_TEST);
-  wireframe.render(camera);
-  gl.enable(gl.DEPTH_TEST);
+  // gl.disable(gl.DEPTH_TEST);
+  // wireframe.render(camera);
+  // gl.enable(gl.DEPTH_TEST);
 }
 
 makeRenderLoop(render)();

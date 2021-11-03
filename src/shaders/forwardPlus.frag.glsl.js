@@ -1,16 +1,18 @@
-export default function(params) {
-  return `
-  // TODO: This is pretty much just a clone of forward.frag.glsl.js
+import { glsl } from './shaderUtil'
 
+export default function(params) {
+  return glsl`
   #version 100
   precision highp float;
 
   uniform sampler2D u_colmap;
   uniform sampler2D u_normap;
   uniform sampler2D u_lightbuffer;
-
-  // TODO: Read this buffer to determine the lights influencing a cluster
   uniform sampler2D u_clusterbuffer;
+  uniform mat4 u_viewMatrix;
+  uniform float u_nearPlane;
+  uniform float u_farPlane;
+  uniform vec3 u_camPos;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -21,7 +23,7 @@ export default function(params) {
     vec3 up = normalize(vec3(0.001, 1, 0.001));
     vec3 surftan = normalize(cross(geomnor, up));
     vec3 surfbinor = cross(geomnor, surftan);
-    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;
+    return normalize(normap.y * surftan + normap.x * surfbinor + normap.z * geomnor);
   }
 
   struct Light {
@@ -81,8 +83,19 @@ export default function(params) {
 
     vec3 fragColor = vec3(0.0);
 
-    for (int i = 0; i < ${params.numLights}; ++i) {
-      Light light = UnpackLight(i);
+    int clusterIdxX = int(gl_FragCoord.x / float(${params.canvasWidth}) * float(${params.xSlices}));
+    int clusterIdxY = int(gl_FragCoord.y / float(${params.canvasHeight}) * float(${params.ySlices}));
+    int clusterIdxZ = int((-(u_viewMatrix * vec4(v_position, 1.0)).z - u_nearPlane) / (u_farPlane - u_nearPlane) * float(${params.zSlices}));
+    int clusterIdx = clusterIdxX + clusterIdxY * ${params.xSlices} + clusterIdxZ * ${params.ySlices} * ${params.xSlices};
+    int clusterTexHeight = ${params.numLights} / 4 + 1;
+    int clusterTexWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
+    int lightCount = int(ExtractFloat(u_clusterbuffer, clusterTexWidth, clusterTexHeight, clusterIdx, 0));
+
+    for (int i = 1; i <= ${params.numLights}; i += 1) {
+      if (i > lightCount) break;
+      int lightIdx = int(ExtractFloat(u_clusterbuffer, clusterTexWidth, clusterTexHeight, clusterIdx, i));
+      
+      Light light = UnpackLight(lightIdx);
       float lightDistance = distance(light.position, v_position);
       vec3 L = (light.position - v_position) / lightDistance;
 
@@ -90,6 +103,10 @@ export default function(params) {
       float lambertTerm = max(dot(L, normal), 0.0);
 
       fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+
+      vec3 halfVec = normalize(L + normalize(u_camPos - v_position));
+      float specular = pow(max(dot(normal, halfVec), 0.0), 1024.0);
+      fragColor += specular * light.color * vec3(lightIntensity);
     }
 
     const vec3 ambientLight = vec3(0.025);

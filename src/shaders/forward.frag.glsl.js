@@ -1,11 +1,14 @@
+import { glsl } from "./shaderUtil";
+
 export default function(params) {
-  return `
+  return glsl`
   #version 100
   precision highp float;
 
   uniform sampler2D u_colmap;
   uniform sampler2D u_normap;
   uniform sampler2D u_lightbuffer;
+  uniform vec3 u_camPos;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -16,7 +19,7 @@ export default function(params) {
     vec3 up = normalize(vec3(0.001, 1, 0.001));
     vec3 surftan = normalize(cross(geomnor, up));
     vec3 surfbinor = cross(geomnor, surftan);
-    return normap.y * surftan + normap.x * surfbinor + normap.z * geomnor;
+    return normalize(normap.y * surftan + normap.x * surfbinor + normap.z * geomnor);
   }
 
   struct Light {
@@ -85,6 +88,10 @@ export default function(params) {
       float lambertTerm = max(dot(L, normal), 0.0);
 
       fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+
+      vec3 halfVec = normalize(L + normalize(u_camPos - v_position));
+      float specular = pow(max(dot(normal, halfVec), 0.0), 1024.0);
+      fragColor += specular * light.color * vec3(lightIntensity);
     }
 
     const vec3 ambientLight = vec3(0.025);
