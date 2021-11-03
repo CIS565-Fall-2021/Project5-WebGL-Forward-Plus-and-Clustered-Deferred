@@ -91,6 +91,9 @@ export default function(params) {
     fragColor += albedo * ambientLight;
 
     gl_FragColor = vec4(fragColor, 1.0);
+
+    // Uncomment to render normal map
+    // gl_FragColor = vec4((normal + 1.0) / 2.0, 1.0);
   }
   `;
 }
