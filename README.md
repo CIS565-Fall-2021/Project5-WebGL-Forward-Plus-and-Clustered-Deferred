@@ -13,7 +13,7 @@ WebGL Forward+ and Clustered Deferred Shading
 
 ## Demo Video/GIF
 
-[![](img/video.png)](TODO)
+![](img/represent.gif)
 
 ## Abstract
 
@@ -28,118 +28,101 @@ Starting from a forward shading pipeline like our baseline, the pseudocode looks
 for object in scene:
     do shading for all lights on object
 ```
-A big problem is that, when there are many overlapped objects in the scene, forward shading renders the occluded ones unnecessarily
+A big problem is that, when there are many overlapped objects in the scene, forward shading renders the occluded ones unnecessarily.
 
-### Forward+
+The insight of deferred shading is to decouple the process of determining if a object is in the final image from the shading of objects. Since loading the objects may be considerable costly, we can record all information needed for shading during the first peocess in geometry buffers (G-buffers), and just read these buffers in the shading phage.
+```
+for object in scene:
+    record information of object in G-buffer
 
-### Clustered Shading
+read G-buffer and do shading for all lights
+```
 
-The À-Trous wavelet transform is kind of technique that approximates blur filters (like Gaussian), with fewer memory reads. The key is to use a small blur filter, and iteratively space out the samples going through it.
+The information stored in G-buffers varies from implementation to implementation. In our shader, only position, normal and albedo are recorded, which are enough for basic Lambertian or Blinn-Phong shading.
 
-![](img/res/atrous.png)
-
-As shown above, a 5x5 filter is applied to approximate 16x16 blur by 3 iterations.
-
-However, simply running a blur filter on an image often reduces the amount of detail, smoothing sharp edges. That is where "edge-avoiding" comes in. For a 3D scene, some information stored in geometry buffers (G-buffers) can be useful for guiding the filter to detect and preserve edges, such as per-pixel normals and per-pixel positions.
-
-| scene | normal | position |
+| position | normal | albedo |
 | ------------------------ | ------------------------ | ----------------------- |
-| ![](img/res/ref.png) | ![](img/res/norm.png) | ![](img/res/pos.png) |
-> Scene: scenes/cornell_ceiling_light.txt
+| ![](img/pos.png) | ![](img/norm.png) | ![](img/col.png) |
 
-According to these G-buffers, the edge-stopping function is added to the À-Trous filter, which diminshes the influence of neighboring samples that has far different values in G-buffers. As a result, the edge-avoiding À-Trous wavelet filter provides nice smoothing on planar surfaces while keeps the original edges.
+### Forward+ and Clustered Shading
 
-| raw pathtraced image | simple blur | blur guided by G-buffers |
-| ------------------------ | ------------------------ | ----------------------- |
-| ![](img/res/raw.png) | ![](img/res/blur.png) | ![](img/res/denoise.png) |
+Another problem of the original forward pipeline is that for each object, it computes influence from all lights. However, since the influence of a light decreases as the distance gets larger, its actual influencing area is limited. For example, spheres for point lights. Following the idea of mesh grids, we can split the frustum of camera into small clusters. Objects in some clusters are only influenced by lights in those ones.
+```
+assign lights to clusters
+
+do shading for lights in corresponding clusters of objects
+```
+
+There are many ways to perform the division of frustum. In my implementation it is simply Uniform NDC, which uniformly divides clusters in NDC space, and of course the division will be uneven after transferred to world space. The divided frustum is something like follow.
+
+![](img/divide.png)
+
+(I tried to implement the division of Tiago Sousa’s DOOM 2016 Siggraph work mentioned in http://www.aortiz.me/2018/12/21/CG.html#comparing-algorithms, but the result seemed not as expected. A comment is leaved in my Forward+ shader.)
+
+For the lights assignment, I follow the idea credit by Janine's work in https://github.com/j9liu/Project5-WebGL-Forward-Plus-and-Clustered-Deferred. Instead of transfering every cluster into world space and checking if they intersects with sphere shaped lights, it is easier and more effient to transfer bounding box of every light into NDC space and see which clusters they occupy. The math of transformation is shown as follow.
+
+![](img/trans.png)
+
+The idea of cluster shading can also be applied to deferred shading, resulting to our clustered deferred shading.
 
 ## Performance Analysis
 
-### Measurement Metric
+### Different Rendering Methods
 
-**A. Runtime Measurement**
+![](img/method.png)
 
-To measure performance, CUDA events are applied to record the time cost for each iteration. The average runtime of path tracer is defined as total iterations rendered divided by total time elapsed, while the average runtime of denoiser is defined as its average time cost for running 100 times.
+The first thing to be noticed is that Forward is outperformed by Forward+ and Clustered Deferred with any number of lights, as we expected. Since it considers all lights in the scene, its performance drops a lot when the number of lights is very large.
 
-Both of the results will be shown in the title of the application.
+As shown in figure, Forward+ performs better than Clustered Deferred at the beginning, but as the number of lights is large enough, it is surpassed. Theoretically, Clustered Deferred should be a better method since it eliminates the overdraw of occluded objects. However, due to utilization of g-buffers, it has a high memory bandwidth. It is known that the memory latency can be hided someway, but in a case that the computation load is low, for example small number of lights, notable time may be taken to wait for memory. An optimization to achieve smaller g-buffers is provided in later parts, and how reducing memory bandwidth benefits for performance can be observed.
 
-![](img/res/title.png)
+Last, a strange phenomenon is that the performance of Forward+ drops more dramastically than Forward sometimes. I guess it is because that we use Uniform NDC for cluster division, which leads to uneven slices along z-axis. Too many lights falls into clusters with same z coordinate. And cluster division itself brings additional overheads. The result could be better if I have more time to apply a better division or finetune the parameters.
 
-This feature can be enabled by toggling this macro defined in `src/main.h`
+### Deferred Blinn-Phong Shading
+
+Blinn-Phong shading is a very famous shading method. It adds a specular term to the classical Lambertian model (diffuse + ambient).
+
+![](img/phong.png)
 ```
-// Toggle for measuring performance
-#define RUN_TIME 1
-```
-
-**B. Image Comparison**
-
-The quality of a denoised result is measured as its difference from a reference image. Such ground truth is obtained by path tracing at 10000 spp. We use structural similarity index (SSIM) to perform image comparison, which ranges from 0 (totally different) to 1 (same).
-
-The comparison script is located in `image_diff_tool/ssim.py`. It can be used in the following way and the computed SSIM will be printed.
-```
-python ssim.py -f DIR_TO_FIRST_IMG -s DIR_TO_SECOND_IMG
+specular_term = max(pow(dot(H, N), shininess), 0)
 ```
 
-### Performance of Denoising
+Here `H` is halfway between the view vector and the light direction. `shininess` controls how diffuse the highlight is, with smaller values being more diffuse.
 
-| pathtraced image at 10spp | denoised image | reference |
-| ------------------------ | ------------------------ | ----------------------- |
-| ![](img/res/raw.png) | ![](img/res/denoise.png) | ![](img/res/ref.png) |
-| SSIM = 0.4707 | SSIM = 0.9902 | SSIM = 1 |
+| Lambertian | Blinn-Phong |
+| ------------------------ | ------------------------ |
+| ![](img/lamb.png) | ![](img/phong2.png) |
 
-![](img/res/time.png)
+Look at the floor of the right figure, a highlight can be observed.
 
-The result shows significant improvement after applying denoiser to the raw pathtraced image, both visually and from SSIM measurement. If we consider `SSIM > 0.98` and no obvious artifacts as a "acceptably smooth" result, experiments show that at least 2500 iterations are needed for a path tracer.
+The cost of Blinn-Phong is trivial since it only adds one additional step for specular computation. The different from Lambertian can only be obvious as the number of lights is large enough. Here is a comparison in runtime with 1000 lights.
 
-| pathtraced image at 2500spp | reference |
-| ------------------------ | ----------------------- |
-| ![](img/res/2500.png) | ![](img/res/ref.png) |
-| SSIM = 0.9831 | SSIM = 1 |
+| Lambertian | Blinn-Phong |
+| ------------------------ | ------------------------ |
+| 59ms | 77ms |
 
-However, with fine-tuned parameters, the denoised image with 10 iterations path tracing shows even higher similarity! The parameters we use are shown as below.
+### G-buffer Optimization
 
-![](img/res/para.png)
+To reduce the size of G-buffers, 2-component normals are used following the idea in this paper https://jcgt.org/published/0003/02/01/paper.pdf. The main idea is that we can map a sphere to an octahedron, project down into the z = 0 plane, and then reflect the −z-hemisphere over the appropriate diagonal.
 
-### Denoising at Different Image Resolutions
+![](img/oct.png)
 
-![](img/res/resolution.png)
+The pseudo code is also provided in the paper. In this way, the original 3-dimension normals can be encoded to 2-component codes. The reconstructed normals are shown as follow.
 
-If the resolution of the rendered image changes, the runtime of denoiser should change with the same ratio, since it performs filtering for fixed iterations. This can be confirmed in above figure. On the other hand, it is noticed that as the resolution grows, the proportion of total runtime for denoising becomes larger.
+| Original Normals | Reconstructed Normals |
+| ------------------------ | ------------------------ |
+| ![](img/norm.png) | ![](img/norm2.png) |
 
-### Denoising with Different Filter Sizes
+It can be observed that although the details, like gaps between bricks, are not recovered perfectly, the result is still acceptable from a general view. The amazing part is that we can now use just 2 G-buffers instead of 3.
 
-Since À-Trous wavelet transform uses more filtering iterations to approximate larger filter, the effective filter sizes are 5, 9, 17, ... (corresponding to 1, 2, 3, ... iterations).
+| Original Layout | Optimized Layout |
+| ------------------------ | ------------------------ |
+| buffer1 [pos.x, pos.y, pos.z, 1] | buffer1 [pos.x, pos.y, pos.z, code.x] |
+| buffer2 [normal.x, normal.y, normal.z, 0] | buffer2 [code.y, albedo.x, albedo.y, albedo.z] |
+| buffer3 [albedo.x, albedo.y, albedo.z, 1] | buffer3 [] |
 
-| pathtraced image at 10spp | 5x5 filter | 9x9 filter |
-| ------------------------ | ------------------------ | ----------------------- |
-| ![](img/res/raw.png) | ![](img/res/iter1.png) | ![](img/res/iter2.png) |
-| SSIM = 0.4707 | SSIM = 0.8094 | SSIM = 0.9659 |
+![](img/opt.png)
 
-| 17x17 filter | 33x33 filter | 65x65 filter |
-| ------------------------ | ------------------------ | ----------------------- |
-| ![](img/res/iter3.png) | ![](img/res/iter4.png) | ![](img/res/denoise.png) |
-| SSIM = 0.9876 | SSIM = 0.9901 | SSIM = 0.9902 |
-
-As the filter grows larger and larger, the result is more and more smooth. Speckles can be observed when the filter size is small, and they becomes larger and less obvious until vanishing if applying a larger filter. Anyway, even denoising with a small filter can help improve SSIM a lot, since SSIM measures the structural information. The visual quality does not scale uniformly with filter size. Also, the runtime is measured at each filter size.
-
-![](img/res/filter.png)
-
-As expected, the runtime increases nearly linearly as the filter size (i.e. the number of filtering iterations).
-
-### Denoising for Different Material Types
-
-The motivation of the work in [Edge-Avoiding À-Trous Wavelet Transform for fast Global Illumination Filtering](https://jo.dreggn.org/home/2010_atrous.pdf) is from the following observation.
-
->The incident irradiance at a single point on a surface is described by the integral over the hemisphere. Under interactive or real-time constraints a path tracer can only trace a single path per pixel thus estimating the integral with a single sample only. But if neighboring hemispheres are similar one would expect similar integrals. Therefore the smoothing tries to average samples with a similar hemisphere.
-
-It can be inferred that such denoising method may work well on diffuse surface, where the reflection is evenly distributed in the hemisphere. However, for specular or refractive surface it may fail since the light distributions vary a lot even for neighbor points.
-
-| pathtraced image at 10spp | denoised image | reference |
-| ------------------------ | ------------------------ | ----------------------- |
-| ![](img/res/mat_raw.png) | ![](img/res/mat_denoise.png) | ![](img/res/mat_ref.png) |
-> Scene: scenes/diff_mat_ceiling_light.txt
-
-The lower-left diffuse sphere seems very close to reference after denoising, but the other two does not. For the upper specular sphere, the reflected two spheres on its surface are actually blurred, since our G-buffers can not capture edges there. For the lower-right refractive sphere, the denoised result loses many details because the reflections/refractions are very point-dependent, and so benefits from averaging neighbor points are limited.
+Surprisingly, with optimized g-buffers, Clustered Deferred beats Forward+ even when the number of lights is small. This verifies the statement we made in previous part. Also, notice that the benefits of this optimization gets insignificant when the number of lights is very large. The reason may be that the computation load is considerably high, making the memory latency less important. At the same time, the encoding and decoding takes additional cost.
 
 ### Credits
 
@@ -149,3 +132,6 @@ The lower-left diffuse sphere seems very close to reference after denoising, but
 * [glMatrix](https://github.com/toji/gl-matrix) by [@toji](https://github.com/toji) and contributors
 * [minimal-gltf-loader](https://github.com/shrekshao/minimal-gltf-loader) by [@shrekshao](https://github.com/shrekshao)
 * A Primer On Efficient Rendering Algorithms & Clustered Shading, http://www.aortiz.me/2018/12/21/CG.html#comparing-algorithms
+* Idea of iterating on lights from Janine Liu's work, https://github.com/j9liu/Project5-WebGL-Forward-Plus-and-Clustered-Deferred
+* Concepts and figures from CIS460, https://www.cis.upenn.edu/~cis460/21fa/index.html
+* A Survey of Efficient Representations for Independent Unit Vectors, https://jcgt.org/published/0003/02/01/paper.pdf

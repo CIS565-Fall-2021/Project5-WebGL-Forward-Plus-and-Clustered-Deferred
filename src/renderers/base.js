@@ -29,7 +29,6 @@ export default class BaseRenderer {
 
     // Traverse each light
     for (let i = 0; i < scene.lights.length; i++) {
-    // for (let i = 0; i < 1; i++) {
       let light = scene.lights[i];
 
       // Bounding box of point light

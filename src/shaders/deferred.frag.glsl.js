@@ -104,16 +104,16 @@ export default function(params) {
   
   void main() {
     // TODO: extract data from g buffers and do lighting
-    vec3 position = texture2D(u_gbuffers[0], v_uv).xyz;
-    vec3 normal = texture2D(u_gbuffers[1], v_uv).xyz;
-    vec3 albedo = texture2D(u_gbuffers[2], v_uv).rgb;
+    // vec3 position = texture2D(u_gbuffers[0], v_uv).xyz;
+    // vec3 normal = texture2D(u_gbuffers[1], v_uv).xyz;
+    // vec3 albedo = texture2D(u_gbuffers[2], v_uv).rgb;
 
     // Use compact g-buffers
-    // vec4 buffer1 = texture2D(u_gbuffers[0], v_uv);
-    // vec4 buffer2 = texture2D(u_gbuffers[1], v_uv);
-    // vec3 position = buffer1.xyz;
-    // vec3 normal = decode_normal(vec2(buffer1.w, buffer2.x));
-    // vec3 albedo = buffer2.yzw;
+    vec4 buffer1 = texture2D(u_gbuffers[0], v_uv);
+    vec4 buffer2 = texture2D(u_gbuffers[1], v_uv);
+    vec3 position = buffer1.xyz;
+    vec3 normal = decode_normal(vec2(buffer1.w, buffer2.x));
+    vec3 albedo = buffer2.yzw;
     //
 
     // Determine the cluster
@@ -147,8 +147,8 @@ export default function(params) {
       fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
 
       // Blinn-Phong shading
-      // float specular_term = phong_specular(position, L, normal, 116.0);
-      // fragColor += albedo * specular_term * light.color * vec3(lightIntensity);
+      float specular_term = phong_specular(position, L, normal, 32.0);
+      fragColor += albedo * specular_term * light.color * vec3(lightIntensity);
     }
 
     const vec3 ambientLight = vec3(0.025);
@@ -156,8 +156,14 @@ export default function(params) {
 
     gl_FragColor = vec4(fragColor, 1.0);
 
+    // Uncomment to render position map
+    // gl_FragColor = vec4(position / 10.0, 1.0);
+    //
     // Uncomment to render normal map
     // gl_FragColor = vec4((normal + 1.0) / 2.0, 1.0);
+    //
+    // Uncomment to render albedo map
+    // gl_FragColor = vec4(albedo, 1.0);
     //
   }
   `;
