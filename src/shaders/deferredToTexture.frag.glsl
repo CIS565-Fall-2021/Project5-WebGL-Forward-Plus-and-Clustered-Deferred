@@ -22,8 +22,17 @@ void main() {
     vec3 col = vec3(texture2D(u_colmap, v_uv));
 
     // TODO: populate your g buffer
-    // gl_FragData[0] = ??
-    // gl_FragData[1] = ??
-    // gl_FragData[2] = ??
+
+    // gl_FragData[0] = vec4(col, 1.0);
+    // gl_FragData[1] = vec4(v_position, 1.0);
+    // gl_FragData[2] = vec4(norm, 0.0);
+
+    // 2 - normal 
+    vec3 normUnit = normalize(norm);
+    float pX = normUnit[0] / (1.0 + normUnit[2]);
+    float pY = normUnit[1] / (1.0 + normUnit[2]);
+
+    gl_FragData[0] = vec4(col, pX);
+    gl_FragData[1] = vec4(v_position, pY);
     // gl_FragData[3] = ??
 }

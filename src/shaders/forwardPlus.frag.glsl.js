@@ -12,6 +12,12 @@ export default function(params) {
   // TODO: Read this buffer to determine the lights influencing a cluster
   uniform sampler2D u_clusterbuffer;
 
+  uniform float u_near;
+  uniform float u_far;
+  uniform mat4 u_viewMatrix;
+  uniform int u_maxLightPerCluster;
+
+
   varying vec3 v_position;
   varying vec3 v_normal;
   varying vec2 v_uv;
@@ -78,11 +84,37 @@ export default function(params) {
     vec3 albedo = texture2D(u_colmap, v_uv).rgb;
     vec3 normap = texture2D(u_normap, v_uv).xyz;
     vec3 normal = applyNormalMap(v_normal, normap);
+    int xSlices = int(${params.xSlices});
+    int ySlices = int(${params.ySlices});
+    int zSlices = int(${params.zSlices});
+
+    float canvasWidth = float(${params.canvasWidth});
+    float canvasHeight = float(${params.canvasHeight});
 
     vec3 fragColor = vec3(0.0);
 
+    int textureWidth = xSlices * ySlices * zSlices;
+    int textureHeight = int(ceil(float(u_maxLightPerCluster + 1) / 4.0));
+
+    int xIdx = int(floor(gl_FragCoord.x / canvasWidth * float(xSlices)));
+    int yIdx = int(floor(gl_FragCoord.y / canvasHeight * float(ySlices)));
+
+    vec4 v_position_view = u_viewMatrix * vec4(v_position, 1);
+    int zIdx = int( (-v_position_view.z - u_near) / (u_far - u_near) * float(zSlices));
+    int clusterIdx = xIdx + yIdx * xSlices + zIdx * xSlices * ySlices;
+
+    int lightNum = int(ExtractFloat(u_clusterbuffer, textureWidth, textureHeight, clusterIdx,0));
+
+
     for (int i = 0; i < ${params.numLights}; ++i) {
-      Light light = UnpackLight(i);
+
+      if(i >= lightNum){
+        break;
+      }
+
+      int lightIdx = int(ExtractFloat(u_clusterbuffer, textureWidth, textureHeight, clusterIdx, i + 1));
+      Light light = UnpackLight(lightIdx);
+      
       float lightDistance = distance(light.position, v_position);
       vec3 L = (light.position - v_position) / lightDistance;
 
