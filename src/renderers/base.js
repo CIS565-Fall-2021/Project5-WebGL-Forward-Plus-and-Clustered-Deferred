@@ -47,7 +47,7 @@ export default class BaseRenderer {
 			let radius = light.radius;
 
 			const pos_view = vec4.transformMat4([], vec4.fromValues(pos[0], pos[1], pos[2], 1.0), viewMatrix);
-			pos_view[2] = -pos_view[2];
+			pos_view[2] = Math.abs(pos_view[2]);
 
 			/* determine the minimum and maximum coords of the bounding box in the transformed (frustum) view */
 			let mins = [

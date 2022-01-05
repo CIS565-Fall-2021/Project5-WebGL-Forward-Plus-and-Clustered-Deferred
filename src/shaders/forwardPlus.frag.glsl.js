@@ -2,8 +2,7 @@ import { MAX_LIGHTS_PER_CLUSTER }  from "../renderers/base"
 
 export default function(num_lights, cam_far, cam_near, slices) {
 	return `
-
-// TODO: This is pretty much just a clone of forward.frag.glsl.js
+	
 
 #version 100
 precision highp float;
@@ -12,7 +11,6 @@ uniform sampler2D u_colmap;
 uniform sampler2D u_normap;
 uniform sampler2D u_lightbuffer;
 
-// TODO: Read this buffer to determine the lights influencing a cluster
 uniform sampler2D u_clusterbuffer;
 uniform mat4 u_viewMatrix;
 uniform int u_h;
