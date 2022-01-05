@@ -2,8 +2,8 @@
 #extension GL_EXT_draw_buffers: enable
 precision highp float;
 
-#define OPTIMIZED 0
-/* the optimization flag must be in sync with the flag in deferred.frag.glsl.js */
+#define OPTIMIZED 1
+/* the optimization flag must be in sync with the flag in deferred.frag.glsl.js and clusteredDeferred.js */
 
 uniform sampler2D u_colmap;
 uniform sampler2D u_normap;
@@ -30,17 +30,18 @@ void main() {
     // gl_FragData[2] = ??
     // gl_FragData[3] = ??
 
-#if !OPTIMIZED
+#if OPTIMIZED
+/* optimized */
+    norm = normalize(norm);
+    /* for normalized vec3s we have x^2+y^2+z^3 = 1 so if we know only x and y, we can deduce z
+     * as z = sqrt(1-x^2+y^2) */
+    gl_FragData[0] = vec4(v_position, norm[0]);
+    gl_FragData[1] = vec4(col, norm[1]);
+#else
 /* unoptimized */
     gl_FragData[0] = vec4(v_position, 1.0);
     gl_FragData[1] = vec4(col, 1.0);
     gl_FragData[2] = vec4(norm, 1.0);
-
-#else
-/* optimized */
-    norm = normalize(norm); /* does this lose information? */
-    gl_FragData[0] = vec4(v_position, norm[0]);
-    gl_FragData[1] = vec4(col, norm[1]);
 #endif    
 
 }

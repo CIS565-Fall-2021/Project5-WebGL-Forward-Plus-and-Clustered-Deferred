@@ -6,7 +6,7 @@ export default function(num_gbuffers, num_lights, cam_far, cam_near, slices) {
 #version 100
 precision highp float;
 
-#define OPTIMIZED 0
+#define OPTIMIZED 1
 /* the optimization flag must be in sync with the flag in deferredToTexture.frag.glsl */
 
 #define BLINN_PHONG 1
@@ -109,8 +109,11 @@ void main() {
 	vec3 v_position = gb0.xyz;
 	vec3 albedo = gb1.xyz;
 #if OPTIMIZED
-	/* TODO */
-	vec3 normal = ...;
+	/* can determine z from just x and y since this is a normalized vector with x^2+y^2+z^2=1 */
+	float x = gb0.w;
+	float y = gb1.w;
+	float z = sqrt(1.0 - pow(x, 2.0) - pow(y, 2.0));
+	vec3 normal = vec3(x, y, z); 
 #else
 	vec3 normal = gb2.xyz;
 #endif
@@ -136,13 +139,12 @@ void main() {
 		vec3 L = (light.position - v_position) / lightDistance;
 
 		float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-		float lambertTerm = max(dot(L, normal), 0.0);
-
-		fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
-
+		float lambertTerm = 
 	#if BLINN_PHONG
-		fragColor += blinn_phong(v_position, light.position, normal) * light.color * vec3(lightIntensity);
+		blinn_phong(v_position, light.position, normal) + 
 	#endif
+		max(dot(L, normal), 0.0);
+		fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
 	}
 
 	const vec3 ambientLight = vec3(0.025);

@@ -131,13 +131,13 @@ void main() {
 		vec3 L = (light.position - v_position) / lightDistance;
 
 		float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-		float lambertTerm = max(dot(L, normal), 0.0);
+		float lambertTerm = 
+	#if BLINN_PHONG
+		blinn_phong(light.position, normal) + 
+	#endif
+		max(dot(L, normal), 0.0);
 
 		fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
-	
-	#if BLINN_PHONG
-		fragColor += blinn_phong(light.position, normal) * light.color * vec3(lightIntensity);
-	#endif
 	}
 
 	const vec3 ambientLight = vec3(0.025);
