@@ -12,9 +12,7 @@ export default class ForwardRenderer {
     this._lightTexture = new TextureBuffer(NUM_LIGHTS, 8);
 
     // Initialize a shader program. The fragment shader source is compiled based on the number of lights
-    this._shaderProgram = loadShaderProgram(vsSource, fsSource({
-      numLights: NUM_LIGHTS,
-    }), {
+    this._shaderProgram = loadShaderProgram(vsSource, fsSource(NUM_LIGHTS), {
       uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_lightbuffer'],
       attribs: ['a_position', 'a_normal', 'a_uv'],
     });

@@ -10,8 +10,8 @@ import { Spector } from 'spectorjs';
 
 export var ABORTED = false;
 export function abort(message) {
-  ABORTED = true;
-  throw message;
+	ABORTED = true;
+	throw message;
 }
 
 // Get the canvas element
@@ -22,24 +22,22 @@ const glContext = canvas.getContext('webgl');
 
 // Get a debug context
 export const gl = DEBUG ? WebGLDebug.makeDebugContext(glContext, (err, funcName, args) => {
-  abort(WebGLDebug.glEnumToString(err) + ' was caused by call to: ' + funcName);
+	abort(WebGLDebug.glEnumToString(err) + ' was caused by call to: ' + funcName);
 }) : glContext;
 
 const supportedExtensions = gl.getSupportedExtensions();
 const requiredExtensions = [
-  'OES_texture_float',
-  'OES_texture_float_linear',
-  'OES_element_index_uint',
-  'WEBGL_depth_texture',
-  'WEBGL_draw_buffers',
+	'OES_texture_float',
+	'OES_texture_float_linear',
+	'OES_element_index_uint',
+	'WEBGL_depth_texture',
+	'WEBGL_draw_buffers',
 ];
 
 // Check that all required extensions are supported
-for (let i = 0; i < requiredExtensions.length; ++i) {
-  if (supportedExtensions.indexOf(requiredExtensions[i]) < 0) {
-    throw 'Unable to load extension ' + requiredExtensions[i];
-  }
-}
+for (const ext of requiredExtensions)
+	if (!supportedExtensions.includes(ext))
+		throw 'Unable to load extension ' + ext;
 
 // Get the maximum number of draw buffers
 gl.getExtension('OES_texture_float');
@@ -71,31 +69,31 @@ cameraControls.zoomSpeed = 1.0;
 cameraControls.panSpeed = 2.0;
 
 function setSize(width, height) {
-  canvas.width = width;
-  canvas.height = height;
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
+	canvas.width = width;
+	canvas.height = height;
+	camera.aspect = width / height;
+	camera.updateProjectionMatrix();
 }
 
 setSize(canvas.clientWidth, canvas.clientHeight);
 window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
 
 if (DEBUG) {
-  const spector = new Spector();
-  spector.displayUI();
+	const spector = new Spector();
+	spector.displayUI();
 }
 
 // Creates a render loop that is wrapped with camera update and stats logging
 export function makeRenderLoop(render) {
-  return function tick() {
-    cameraControls.update();
-    stats.begin();
-    render();
-    stats.end();
-    if (!ABORTED) {
-      requestAnimationFrame(tick)
-    }
-  }
+	return function tick() {
+		cameraControls.update();
+		stats.begin();
+		render();
+		stats.end();
+		if (!ABORTED) {
+			requestAnimationFrame(tick)
+		}
+	}
 }
 
 // import the main application
