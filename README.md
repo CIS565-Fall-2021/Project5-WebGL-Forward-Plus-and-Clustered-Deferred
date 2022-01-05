@@ -8,17 +8,17 @@ WebGL Forward+ and Clustered Deferred Shading
 * Tested on: **Google Chrome 96.0.4664.110** on 
    Windows 10, i7-8850H @ 2.592GHz 24GB, Quadro P1000
 
-(will update shortly)
-
 ### Live Online
 
-[![](img/thumb.png)](http://TODO.github.io/Project5-WebGL-Forward-Plus-and-Clustered-Deferred)
+[![Live demo thumbnail](img/thumb.png)](https://https://kaan9.github.io/Project5-WebGL-Forward-Plus-and-Clustered-Deferred/)
 
-### Demo Video/GIF
+### Demo GIF
 
-[![](img/video.png)](TODO)
+![demo gif](img/video.gif)]
 
 ### (TODO: Your README)
+(will update shortly)
+
 
 *DO NOT* leave the README to the last minute! It is a crucial part of the
 project, and we will not be able to grade you without a good README.
