@@ -1,0 +1,9 @@
+N,Forward,Forward+,Deferred
+100,21,44,60
+200,11,25,58
+300,7,16,46
+400,5,12,38
+500,4,9,30
+,,,
+FPS,N = MAX_LIGHTS_PER_CLUSTER,,
+measurements taken by waiting for FPS to stabilize and taking an average of 4 consecutive values,,,

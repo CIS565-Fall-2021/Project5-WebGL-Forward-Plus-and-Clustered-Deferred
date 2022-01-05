@@ -9,7 +9,7 @@ import fsSource from '../shaders/deferred.frag.glsl.js';
 import TextureBuffer from './textureBuffer';
 import BaseRenderer from './base';
 
-const OPTIMIZED = true; /* must be in sync with the flags in deferred.frag and deferredToTexture.frag */
+const OPTIMIZED = 1; /* must be in sync with the flags in deferred.frag and deferredToTexture.frag */
 export const NUM_GBUFFERS = OPTIMIZED ? 2 : 3;
 
 export default class ClusteredDeferredRenderer extends BaseRenderer {
