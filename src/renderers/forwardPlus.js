@@ -16,7 +16,7 @@ export default class ForwardPlusRenderer extends BaseRenderer {
 		
 		this._shaderProgram = loadShaderProgram(vsSource, fsSource(NUM_LIGHTS, camera.far, camera.near, this.slices), {
 			uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_lightbuffer', 'u_clusterbuffer',
-				'u_viewMatrix', 'u_h', 'u_w'],
+				'u_viewMatrix', 'u_h', 'u_w', 'u_camera_pos'],
 			attribs: ['a_position', 'a_normal', 'a_uv'],
 		});
 
@@ -81,6 +81,8 @@ export default class ForwardPlusRenderer extends BaseRenderer {
 
 		gl.uniform1i(this._shaderProgram.u_h, canvas.height);
 		gl.uniform1i(this._shaderProgram.u_w, canvas.width);
+
+		gl.uniform3fv(this._shaderProgram.u_camera_pos, camera.position);
 
 		// Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
 		scene.draw(this._shaderProgram);

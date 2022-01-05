@@ -9,6 +9,9 @@ precision highp float;
 #define OPTIMIZED 0
 /* the optimization flag must be in sync with the flag in deferredToTexture.frag.glsl */
 
+#define BLINN_PHONG 1
+#define BLINN_PHONG_EXP 8.0
+
 uniform sampler2D u_gbuffers[${num_gbuffers}];
 uniform sampler2D u_colmap;
 uniform sampler2D u_lightbuffer;
@@ -17,6 +20,8 @@ uniform sampler2D u_clusterbuffer;
 uniform mat4 u_viewMatrix;
 uniform int u_h;
 uniform int u_w;
+
+uniform vec3 u_camera_pos;
 
 varying vec2 v_uv;
 
@@ -75,6 +80,22 @@ int cluster_idx(vec3 v_position) {
 	return x + y * ${slices.x} + z * ${slices.x} * ${slices.y};
 }
 
+#if BLINN_PHONG
+/*
+ * returns the specular intensity contribution of this light point light source to the fragment's color
+ * this implementation is based on CIS 460 HW 4 https://www.cis.upenn.edu/~cis460/21fa/hw/hw04/openglFun.html
+ */
+float blinn_phong(vec3 v_position, vec3 light_pos, vec3 surface_normal) {
+	vec3 view_vec = normalize(u_camera_pos - v_position); /* view vector from fragment position to camera */
+	vec3 light_vec = normalize(light_pos - v_position); /* vector from fragment position to light source */
+	vec3 H = normalize((view_vec + light_vec) / 2.0);
+	vec3 N = normalize(surface_normal);
+	return max(pow(dot(H, N), BLINN_PHONG_EXP), 0.0);
+}
+
+#endif
+
+
 
 void main() {
 	// TODO: extract data from g buffers and do lighting
@@ -118,6 +139,10 @@ void main() {
 		float lambertTerm = max(dot(L, normal), 0.0);
 
 		fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+
+	#if BLINN_PHONG
+		fragColor += blinn_phong(v_position, light.position, normal) * light.color * vec3(lightIntensity);
+	#endif
 	}
 
 	const vec3 ambientLight = vec3(0.025);

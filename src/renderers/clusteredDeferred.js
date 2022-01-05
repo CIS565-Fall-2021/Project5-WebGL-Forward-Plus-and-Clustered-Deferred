@@ -28,7 +28,7 @@ export default class ClusteredDeferredRenderer extends BaseRenderer {
 	this._progShade = loadShaderProgram(QuadVertSource, fsSource(NUM_GBUFFERS, NUM_LIGHTS, camera.far, camera.near, this.slices), {
 		uniforms: ['u_gbuffers[0]', 'u_gbuffers[1]', 'u_gbuffers[2]', 'u_gbuffers[3]',
 			'u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_lightbuffer', 'u_clusterbuffer',
-			'u_viewMatrix', 'u_h', 'u_w'],
+			'u_viewMatrix', 'u_h', 'u_w', 'u_camera_pos'],
 		attribs: ['a_uv'],
 	});
 
@@ -172,6 +172,7 @@ export default class ClusteredDeferredRenderer extends BaseRenderer {
 		gl.uniform1i(this._progShade.u_h, canvas.height);
 		gl.uniform1i(this._progShade.u_w, canvas.width);
 	
+		gl.uniform3fv(this._progShade.u_camera_pos, camera.position);
 
 		// Bind g-buffers
 		const firstGBufferBinding = 5; // You may have to change this if you use other texture slots
